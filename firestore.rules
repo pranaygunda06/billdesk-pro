@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == id;
+      allow update, delete: if isAdmin();
+    }
+
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /products/{id} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /customers/{id} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Public can read a single invoice by id for pay page; only admin writes
+    match /invoices/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

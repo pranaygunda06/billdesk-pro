@@ -1,23 +1,25 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import ProtectedRoute from './components/ProtectedRoute'
-import AdminLayout from './components/AdminLayout'
-import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
-import Dashboard from './pages/Dashboard'
-import Products from './pages/Products'
-import Customers from './pages/Customers'
-import Billing from './pages/Billing'
-import Invoices from './pages/Invoices'
-import Settings from './pages/Settings'
-import PublicInvoice from './pages/PublicInvoice'
+import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import AdminLayout from './components/AdminLayout.jsx';
+import Login from './pages/auth/Login.jsx';
+import Register from './pages/auth/Register.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import Products from './pages/Products.jsx';
+import Customers from './pages/Customers.jsx';
+import Billing from './pages/Billing.jsx';
+import Invoices from './pages/Invoices.jsx';
+import Settings from './pages/Settings.jsx';
+import PublicInvoice from './pages/PublicInvoice.jsx';
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/i/:invoiceNumber" element={<PublicInvoice />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-
+      {/* Secure opaque token — not invoice number */}
+      <Route path="/p/:token" element={<PublicInvoice />} />
+      {/* Legacy number links still work if needed but discouraged */}
+      <Route path="/i/:invoiceNumber" element={<PublicInvoice />} />
       <Route
         element={
           <ProtectedRoute>
@@ -32,9 +34,7 @@ export default function App() {
         <Route path="/invoices" element={<Invoices />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
-
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
-  )
+  );
 }

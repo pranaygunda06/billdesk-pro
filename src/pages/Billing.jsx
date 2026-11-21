@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Camera, Plus, Trash2 } from 'lucide-react'
 import { db } from '../firebase'
-import { formatCurrency, nextInvoiceNumber, uid } from '../utils/format'
+import { formatCurrency, nextInvoiceNumber, uid, makeShareToken } from '../utils/format'
 import BarcodeScanner from '../components/BarcodeScanner'
 
 export default function Billing() {
@@ -155,9 +155,11 @@ export default function Billing() {
       const numbers = invSnap.docs.map((d) => d.data().invoiceNumber)
       const invoiceNumber = nextInvoiceNumber(settings.invoicePrefix || 'INV', numbers)
       const cust = customers.find((c) => c.id === customerId)
+      const shareToken = makeShareToken()
 
       const invoice = {
         invoiceNumber,
+        shareToken,
         customerId,
         customerName: cust?.name || '',
         customerPhone: cust?.phone || '',

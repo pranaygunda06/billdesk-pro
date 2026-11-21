@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Copy, Download, ExternalLink } from 'lucide-react'
 import { db } from '../firebase'
-import { formatCurrency, formatDate } from '../utils/format'
+import { formatCurrency, formatDate, makeShareToken } from '../utils/format'
 import { downloadInvoicePdf } from '../utils/pdfInvoice'
 
 export default function Invoices() {
@@ -19,14 +19,22 @@ export default function Invoices() {
     return onSnapshot(q, (snap) => setList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
   }, [])
 
-  function publicLink(inv) {
-    const origin = window.location.origin
-    return `${origin}/i/${encodeURIComponent(inv.invoiceNumber)}`
+  async function ensureToken(inv) {
+    if (inv.shareToken) return inv.shareToken
+    const token = makeShareToken()
+    await updateDoc(doc(db, 'invoices', inv.id), { shareToken: token })
+    return token
+  }
+
+  async function publicLink(inv) {
+    const token = await ensureToken(inv)
+    return `${window.location.origin}/p/${token}`
   }
 
   async function copyLink(inv) {
-    await navigator.clipboard.writeText(publicLink(inv))
-    toast.success('Link copied')
+    const url = await publicLink(inv)
+    await navigator.clipboard.writeText(url)
+    toast.success('Secure link copied')
   }
 
   async function markPaid(inv) {
@@ -35,10 +43,11 @@ export default function Invoices() {
   }
 
   async function pdf(inv) {
+    const url = await publicLink(inv)
     await downloadInvoicePdf({
       invoice: inv,
       business,
-      publicUrl: publicLink(inv),
+      publicUrl: url,
     })
   }
 
@@ -50,6 +59,9 @@ export default function Invoices() {
           + New
         </Link>
       </div>
+      <p className="text-xs text-slate-500">
+        Share links use a random secure token (<code className="bg-slate-100 px-1 rounded">/p/…</code>), not the invoice number — cannot be guessed.
+      </p>
       <div className="bg-white rounded-2xl border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-xs uppercase text-slate-500 text-left">
@@ -77,12 +89,17 @@ export default function Invoices() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
-                  <button type="button" title="Copy link" onClick={() => copyLink(inv)} className="p-1.5 hover:bg-slate-100 rounded">
+                  <button type="button" title="Copy secure link" onClick={() => copyLink(inv)} className="p-1.5 hover:bg-slate-100 rounded">
                     <Copy size={14} />
                   </button>
-                  <a href={publicLink(inv)} target="_blank" rel="noreferrer" className="inline-p-1.5 p-1.5 hover:bg-slate-100 rounded inline-block" title="Open public page">
+                  <button
+                    type="button"
+                    title="Open public page"
+                    onClick={async () => window.open(await publicLink(inv), '_blank')}
+                    className="p-1.5 hover:bg-slate-100 rounded"
+                  >
                     <ExternalLink size={14} />
-                  </a>
+                  </button>
                   <button type="button" title="PDF" onClick={() => pdf(inv)} className="p-1.5 hover:bg-slate-100 rounded">
                     <Download size={14} />
                   </button>
@@ -104,9 +121,6 @@ export default function Invoices() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-500">
-        Public link format: <code className="bg-slate-100 px-1 rounded">/i/INVOICE_NUMBER</code> — customer sees bill + pay only.
-      </p>
     </div>
   )
 }
